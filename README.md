@@ -2,14 +2,20 @@
 
 [简体中文](README.zh-CN.md)
 
-Temp Auto Cleaner is a Windows utility that removes eligible temporary files for the current user and exits after one pass. V0.1.0-alpha provides the cleanup core. It runs without a visible console window or administrator privileges and makes no network requests.
+Temp Auto Cleaner is a Windows utility that removes eligible temporary files for the current user and exits after one pass. It runs without a visible console window or administrator privileges and makes no network requests.
+
+## Installation and portable use
+
+- **Setup** installs for the current user and registers a task that runs 30 seconds after the next sign-in. Uninstall from Windows Settings to remove the task and application files. Cleanup logs are kept.
+- **Portable** runs once when you start `TempAutoCleaner.exe`. Use `--dry-run` for a preview. Portable use does not register a scheduled task.
+- Use x64 Windows with .NET Framework 4.8 or later. Full Windows 10 22H2 and Windows 11 acceptance is pending.
 
 ## Cleanup rules
 
 - The target is `%LOCALAPPDATA%\Temp`, resolved through Windows for the current user. The executable accepts a single optional `--dry-run` argument.
 - Both creation time and last-write time must be strictly older than 24 hours. The cleaner skips files with uncertain metadata, protected attributes, multiple hard links, named NTFS data streams, or conflicting open handles.
 - The program traverses ordinary directories. It skips symbolic links, junctions, and other reparse points, and keeps the Temp root. Empty subdirectories are considered after their files and must still meet both age checks.
-- The alpha supports a local NTFS target. Missing or unsafe roots cause the program to exit.
+- The cleaner supports a local NTFS target. Missing or unsafe roots cause the program to exit.
 
 ## Build and preview
 
@@ -26,8 +32,4 @@ Dry Run leaves the cleanup target intact and writes a report under `%LOCALAPPDAT
 
 Exit codes are `0` for success, `1` for partial success, `2` for failure, `3` when another instance is already running, and `64` for invalid arguments.
 
-## Development status
-
-The installer, login task, and packaged releases are planned for later milestones. Full Windows 10 22H2 and Windows 11 compatibility acceptance is pending.
-
-See [contributing and isolated tests](CONTRIBUTING.md), the [technical design](docs/technical-design.md), and the [MIT license](LICENSE).
+See [build and test instructions](CONTRIBUTING.md), the [technical design](docs/technical-design.md), and the [MIT license](LICENSE).

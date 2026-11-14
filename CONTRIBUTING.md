@@ -2,6 +2,10 @@
 
 Build on Windows x64 with the .NET SDK and .NET Framework 4.8 Developer Pack. Keep the cleanup rules independent of future installer and Task Scheduler code.
 
+## Build packages
+
+Install Inno Setup 6.7.4 and place its matching `ChineseSimplified.isl` in the compiler's `Languages` directory. Run `installer/Build-Packages.ps1` with `-InnoCompiler` pointing to `ISCC.exe`. The setup executable, portable ZIP and SHA-256 checksums are written to `dist/`. [Compiler release](https://github.com/jrsoftware/issrc/releases/tag/is-6_7_4) · [Simplified Chinese translation](https://github.com/jrsoftware/issrc/blob/is-6_7_4/Files/Languages/Unofficial/ChineseSimplified.isl)
+
 ## Isolated tests
 
 From the repository root, build the test executable and provide an explicit local NTFS parent directory for its fixtures. Use a dedicated workspace directory for this purpose.
