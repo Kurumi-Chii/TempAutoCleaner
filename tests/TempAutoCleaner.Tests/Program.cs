@@ -14,15 +14,19 @@ namespace TempAutoCleaner.Tests
 
         private static int Main(string[] args)
         {
-            if (args.Length != 1)
+            if (args.Length == 2 && args[0] == ProcessTests.ProbeFlag)
+                return ProcessTests.RunChild(args[1]);
+
+            bool strict = args.Length == 2 && args[0] == "--strict";
+            if (!strict && (args.Length != 1 || args[0].StartsWith("--", StringComparison.Ordinal)))
             {
-                Console.Error.WriteLine("Usage: TempAutoCleaner.Tests.exe <existing isolated sandbox parent>");
+                Console.Error.WriteLine("Usage: TempAutoCleaner.Tests.exe [--strict] <existing isolated sandbox parent>");
                 return 2;
             }
 
             try
             {
-                using (var sandbox = new TestSandbox(args[0]))
+                using (var sandbox = new TestSandbox(args[strict ? 1 : 0]))
                 {
                     var tests = new Action<string>[]
                     {
@@ -44,6 +48,8 @@ namespace TempAutoCleaner.Tests
                         ContinuesAfterFileDisappears,
                         EnumeratesAcrossBatchesWhileDeleting,
                         StreamTests.PreservesFileWithOpenNamedStream,
+                        StreamTests.PreservesDirectoryWithNamedStream,
+                        ProcessTests.PreventsConcurrentProcess,
                         LoggingTests.DryRunWritesReportWithoutRotating,
                         LoggingTests.CleanupRotatesOnlyExpiredOwnedReports,
                         LoggingTests.RejectsJunctionAtLogDestination
@@ -76,6 +82,11 @@ namespace TempAutoCleaner.Tests
                     }
 
                     Console.WriteLine("Passed: {0}, skipped: {1}, failed: {2}", passed, skipped, failed);
+                    if (strict && (skipped > 0 || passed == 0))
+                    {
+                        Console.Error.WriteLine("Strict mode requires all tests to run.");
+                        return 1;
+                    }
                     return failed == 0 ? 0 : 1;
                 }
             }

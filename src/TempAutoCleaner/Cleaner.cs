@@ -72,7 +72,7 @@ namespace TempAutoCleaner
                 beforeOpen?.Invoke(entry.Name);
                 using (SafeFileHandle file = OpenChild(parent, entry.Name, ReadAttributes | Delete, 0, NonDirectory))
                 {
-                    if (!Matches(entry, ReadInfo(file), volume, false) || !HasOnlyDefaultStream(file))
+                    if (!Matches(entry, ReadInfo(file), volume, false) || !HasNoNamedDataStreams(file))
                         return false;
 
                     FileInfoByHandle info = ReadInfo(file);
@@ -125,7 +125,8 @@ namespace TempAutoCleaner
                 // Reopen exclusively for the disposition. Verify the snapshot ID after the reopen.
                 using (SafeFileHandle child = OpenChild(parent, entry.Name, access | Delete, 0, NativeFiles.Directory))
                 {
-                    if (!Matches(entry, ReadInfo(child), volume, true) || ReadEntries(child).Any())
+                    if (!Matches(entry, ReadInfo(child), volume, true) || ReadEntries(child).Any() ||
+                        !HasNoNamedDataStreams(child, isDirectory: true))
                         return false;
                     FileInfoByHandle info = ReadInfo(child);
                     if (!Matches(entry, info, volume, true) || !IsOld(info.Created, info.LastWrite, cutoff))

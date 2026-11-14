@@ -137,7 +137,7 @@ namespace TempAutoCleaner
                 throw LastError();
         }
 
-        internal static unsafe bool HasOnlyDefaultStream(SafeFileHandle handle)
+        internal static unsafe bool HasNoNamedDataStreams(SafeFileHandle handle, bool isDirectory = false)
         {
             // FILE_STREAM_INFO has a 24-byte header followed by a UTF-16 stream name.
             // Multiple streams or an oversized response make this object ineligible.
@@ -148,11 +148,13 @@ namespace TempAutoCleaner
             if (!GetFileInformationByHandleEx(handle, 7, (IntPtr)buffer, 128)) // FileStreamInfo
             {
                 int error = Marshal.GetLastWin32Error();
-                if (error == 38 || error == 122 || error == 234) // EOF / insufficient buffer / more data
+                if (error == 38) // NTFS directories have no default $DATA stream.
+                    return isDirectory;
+                if (error == 122 || error == 234) // Insufficient buffer / more data.
                     return false;
                 throw new Win32Exception(error);
             }
-            return *(int*)buffer == 0 && *(int*)(buffer + 4) == nameSize &&
+            return !isDirectory && *(int*)buffer == 0 && *(int*)(buffer + 4) == nameSize &&
                 new string((char*)(buffer + headerSize), 0, nameSize / sizeof(char)) == defaultStream;
         }
 

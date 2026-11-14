@@ -14,6 +14,44 @@ namespace TempAutoCleaner.Tests
         private const uint OpenExisting = 3;
         private const uint NormalAttributes = 0x80;
 
+        internal static void PreservesDirectoryWithNamedStream(string root)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTime old = now.UtcDateTime.AddDays(-2);
+            string protectedDirectory = Directory.CreateDirectory(Path.Combine(root, "with-stream")).FullName;
+            string ordinaryDirectory = Directory.CreateDirectory(Path.Combine(root, "ordinary")).FullName;
+            string streamPath = protectedDirectory + ":fixture:$DATA";
+
+            using (SafeFileHandle handle = OpenStream(streamPath, GenericWrite, CreateAlways))
+            using (var stream = new FileStream(handle, FileAccess.Write))
+                stream.WriteByte(0x5A);
+
+            foreach (string directory in new[] { protectedDirectory, ordinaryDirectory })
+            {
+                Directory.SetCreationTimeUtc(directory, old);
+                Directory.SetLastWriteTimeUtc(directory, old);
+            }
+
+            var preview = new RunReport(now, dryRun: true);
+            Cleaner.Run(root, now, preview);
+
+            var report = new RunReport(now, dryRun: false);
+            Cleaner.Run(root, now, report);
+
+            if (!Directory.Exists(protectedDirectory))
+                throw new InvalidOperationException("Cleanup deleted a directory containing a named data stream.");
+            if (Directory.Exists(ordinaryDirectory) || report.DeletedDirectories != 1 ||
+                report.SkippedDirectories != 1 || report.Result != "success")
+                throw new InvalidOperationException("Cleanup did not delete the ordinary empty directory.");
+            if (preview.EligibleDirectories != 1 || preview.DeletedDirectories != 0)
+                throw new InvalidOperationException("Dry Run misclassified a directory containing a named stream.");
+
+            using (SafeFileHandle handle = OpenStream(streamPath, GenericRead, OpenExisting))
+            using (var stream = new FileStream(handle, FileAccess.Read))
+                if (stream.ReadByte() != 0x5A)
+                    throw new InvalidOperationException("Cleanup changed the directory's named stream.");
+        }
+
         internal static void PreservesFileWithOpenNamedStream(string root)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;

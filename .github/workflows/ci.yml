@@ -1,0 +1,30 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build Release
+        shell: pwsh
+        run: dotnet build ./tests/TempAutoCleaner.Tests/TempAutoCleaner.Tests.csproj -c Release
+
+      - name: Run all isolated tests
+        shell: pwsh
+        run: |
+          $sandbox = (New-Item -ItemType Directory -Force -Path (Join-Path $env:GITHUB_WORKSPACE 'test-sandbox')).FullName
+          & ./tests/TempAutoCleaner.Tests/bin/Release/net48/TempAutoCleaner.Tests.exe --strict $sandbox

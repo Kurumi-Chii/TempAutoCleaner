@@ -69,7 +69,7 @@ namespace TempAutoCleaner
                         using (SafeFileHandle file = OpenChild(directory.Handle, entry.Name, ReadAttributes | Delete,
                             0, NonDirectory))
                         {
-                            if (!IsOrdinaryFile(ReadInfo(file).Attributes) || !HasOnlyDefaultStream(file))
+                            if (!IsOrdinaryFile(ReadInfo(file).Attributes) || !HasNoNamedDataStreams(file))
                                 continue;
                             FileInfoByHandle current = ReadInfo(file);
                             if (current.Id == entry.Id && current.VolumeSerial == volume && current.Links == 1 &&

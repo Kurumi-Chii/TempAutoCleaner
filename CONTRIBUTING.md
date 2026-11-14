@@ -15,4 +15,6 @@ if ($LASTEXITCODE -ne 0) { throw "Cleanup tests failed with exit code $LASTEXITC
 
 The harness creates its own fixture directories below that parent. Exercise the application against these fixtures through the test harness. Use separate fixture and sentinel directories when checking traversal boundaries. Preserve fixture isolation when adding tests for access failures, links, and changes between enumeration and deletion.
 
+Pass `--strict` before the sandbox path to fail the run when any fixture is skipped. Windows CI uses this mode. The cross-process test launches the test executable and exercises the same mutex logic used at startup with a dedicated mutex and a callback that only returns an exit code.
+
 Before requesting review, report the Windows edition and build, test results, and any cases blocked by filesystem capabilities or permissions. Include the expected safety behavior when changing path validation, time checks, or deletion.

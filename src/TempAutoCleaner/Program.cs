@@ -21,27 +21,36 @@ namespace TempAutoCleaner
                     if (identity.User == null)
                         return 2;
 
-                    using (var mutex = new Mutex(false, @"Global\TempAutoCleaner-" + identity.User.Value))
+                    return RunWithMutex(@"Global\TempAutoCleaner-" + identity.User.Value, () =>
                     {
-                        if (!TryAcquire(mutex))
-                            return 3;
-                        try
-                        {
-                            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
-                                Environment.SpecialFolderOption.DoNotVerify);
-                            return RunOnce(localAppData, args.Length == 1, DateTimeOffset.UtcNow);
-                        }
-                        finally
-                        {
-                            mutex.ReleaseMutex();
-                        }
-                    }
+                        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                            Environment.SpecialFolderOption.DoNotVerify);
+                        return RunOnce(localAppData, args.Length == 1, DateTimeOffset.UtcNow);
+                    });
                 }
             }
             catch (Exception error) when (error is UnauthorizedAccessException || error is IOException ||
                 error is SecurityException || error is WaitHandleCannotBeOpenedException || error is Win32Exception)
             {
                 return 2;
+            }
+        }
+
+        internal static int RunWithMutex(string mutexName, Func<int> run)
+        {
+            using (var mutex = new Mutex(false, mutexName))
+            {
+                if (!TryAcquire(mutex))
+                    return 3;
+
+                try
+                {
+                    return run();
+                }
+                finally
+                {
+                    mutex.ReleaseMutex();
+                }
             }
         }
 
