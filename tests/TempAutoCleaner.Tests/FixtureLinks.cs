@@ -21,6 +21,7 @@ namespace TempAutoCleaner.Tests
     {
         private const uint IoReparseTagMountPoint = 0xA0000003;
         private const uint FsctlSetReparsePoint = 0x000900A4;
+        private const uint FsctlSetSparse = 0x000900C4;
         private const uint GenericWrite = 0x40000000;
         private const uint OpenExisting = 3;
         private const uint BackupSemantics = 0x02000000;
@@ -31,6 +32,12 @@ namespace TempAutoCleaner.Tests
         {
             if (!CreateHardLinkW(path, target, IntPtr.Zero))
                 ThrowFixtureError("Hard link", Marshal.GetLastWin32Error());
+        }
+
+        internal static void MarkSparse(SafeFileHandle file)
+        {
+            if (!DeviceIoControl(file, FsctlSetSparse, null, 0, IntPtr.Zero, 0, out _, IntPtr.Zero))
+                ThrowFixtureError("Sparse file", Marshal.GetLastWin32Error());
         }
 
         internal static void CreateFileSymbolicLink(string path, string target)

@@ -14,10 +14,12 @@ namespace TempAutoCleaner
         private const string PartialSuccess = "partial_success";
         private const string Failed = "failed";
 
-        internal RunReport(DateTimeOffset startedUtc, bool dryRun)
+        internal RunReport(DateTimeOffset startedUtc, bool dryRun, bool inspectLargeFiles = false)
         {
             StartedUtc = FormatUtc(startedUtc);
-            DryRun = dryRun;
+            DryRun = dryRun || inspectLargeFiles;
+            if (inspectLargeFiles)
+                Inspection = new LargeFileInspection(startedUtc);
             Result = "success";
             Errors = new List<ReportError>();
         }
@@ -63,6 +65,9 @@ namespace TempAutoCleaner
 
         [DataMember(Name = "errors_truncated", Order = 13)]
         private bool ErrorsTruncated { get; set; }
+
+        [DataMember(Name = "large_recent_files", Order = 14, EmitDefaultValue = false)]
+        internal LargeFileInspection Inspection { get; private set; }
 
         internal bool HasFailure { get { return Result == Failed; } }
         internal bool HasPartial { get { return Result == PartialSuccess; } }

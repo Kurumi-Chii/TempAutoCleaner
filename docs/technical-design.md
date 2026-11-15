@@ -14,6 +14,8 @@
 
 Dry Run 运行候选项判断并记录报告。它保留清理目标，Windows 仍可能按卷配置更新最后访问时间。由于预演保留现有子项，而实际删除可能改变目录时间和内容，目录结果可能不同。文件能否删除还取决于应用实际执行时的占用状态和文件系统返回结果。
 
+`--inspect-large-files` 沿用目录句柄遍历，只为通过初筛的文件请求属性读取权限，并复核文件 ID、卷、属性、大小和时间。它筛选创建超过 48 小时、最近 24 小时内修改过且大小至少 100 MiB 的普通文件。检查保留 Temp 文件、目录和旧日志。
+
 Windows 的共享模式约束数据读写和删除访问，属性专用访问仍可并发。清理程序在提交删除前重读元数据，检查与提交是两次系统调用。[Windows 文件共享规则](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew)
 
 相关系统接口见 [OBJECT_ATTRIBUTES](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wudfwdm/ns-wudfwdm-_object_attributes)、[目录枚举结构](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_both_dir_info)和[句柄删除接口](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle)。
@@ -25,12 +27,13 @@ Windows 的共享模式约束数据读写和删除访问，属性专用访问仍
 | 字段 | 含义 |
 | --- | --- |
 | `started_utc`, `finished_utc` | 运行开始和结束时间，统一为 UTC |
-| `dry_run` | 是否为预演 |
+| `dry_run` | 非删除模式（预演或检查）为 `true` |
 | `result` | `success`、`partial_success` 或 `failed` |
 | `deleted_files`, `skipped_files`, `deleted_directories`, `skipped_directories` | 删除和跳过的对象计数 |
 | `estimated_deleted_bytes` | 已删除文件的大小估算 |
 | `eligible_files`, `eligible_bytes`, `eligible_directories` | 通过候选项判断的文件数、文件大小和目录数 |
 | `errors`, `errors_truncated` | 仅包含操作标识与错误代码的记录，以及截断标记 |
+| `large_recent_files` | 仅在手动检查时出现，包含匹配总数及最大的 20 个文件。每项记录相对于 Temp 的路径、字节数和两个 UTC 时间戳 |
 
 自动化测试使用调用者显式指定的隔离目录。测试覆盖时间阈值、占用、重解析点、硬链接、目录处理、对象替换和 Dry Run。使用测试目录外的哨兵验证清理边界。
 

@@ -102,7 +102,8 @@ namespace TempAutoCleaner
                         {
                             yield return new DirectoryEntry(name, Marshal.ReadInt64(entry, 96),
                                 (FileAttributes)Marshal.ReadInt32(entry, 56),
-                                Marshal.ReadInt64(entry, 8), Marshal.ReadInt64(entry, 24));
+                                Marshal.ReadInt64(entry, 8), Marshal.ReadInt64(entry, 24),
+                                Marshal.ReadInt64(entry, 40)); // EndOfFile
                         }
                         offset += next;
                     } while (next != 0);
@@ -132,14 +133,17 @@ namespace TempAutoCleaner
             internal readonly FileAttributes Attributes;
             internal readonly long Created;
             internal readonly long LastWrite;
+            internal readonly long Size;
 
-            internal DirectoryEntry(string name, long id, FileAttributes attributes, long created, long lastWrite)
+            internal DirectoryEntry(string name, long id, FileAttributes attributes, long created, long lastWrite,
+                long size)
             {
                 Name = name;
                 Id = id;
                 Attributes = attributes;
                 Created = created;
                 LastWrite = lastWrite;
+                Size = size;
             }
         }
     }

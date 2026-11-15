@@ -16,6 +16,7 @@ namespace TempAutoCleaner
         internal const uint Delete = 0x00010000;
         private const uint Synchronize = 0x00100000;
         internal const uint ShareReadWrite = 0x0003;
+        internal const uint ShareDelete = 0x0004;
         internal const uint Directory = 0x0001;
         internal const uint NonDirectory = 0x0040;
         internal const uint OpenExisting = 1;

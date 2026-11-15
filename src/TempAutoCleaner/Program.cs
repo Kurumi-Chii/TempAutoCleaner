@@ -11,7 +11,10 @@ namespace TempAutoCleaner
     {
         private static int Main(string[] args)
         {
-            if (args.Length > 1 || (args.Length == 1 && args[0] != "--dry-run"))
+            if (args.Length > 1)
+                return 64;
+            string option = args.Length == 1 ? args[0] : null;
+            if (option != null && option != "--dry-run" && option != "--inspect-large-files")
                 return 64;
 
             try
@@ -25,7 +28,8 @@ namespace TempAutoCleaner
                     {
                         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
                             Environment.SpecialFolderOption.DoNotVerify);
-                        return RunOnce(localAppData, args.Length == 1, DateTimeOffset.UtcNow);
+                        return RunOnce(localAppData, option == "--dry-run", DateTimeOffset.UtcNow,
+                            inspectLargeFiles: option == "--inspect-large-files");
                     });
                 }
             }
@@ -67,12 +71,13 @@ namespace TempAutoCleaner
             }
         }
 
-        internal static int RunOnce(string localAppData, bool dryRun, DateTimeOffset now)
+        internal static int RunOnce(string localAppData, bool dryRun, DateTimeOffset now,
+            bool inspectLargeFiles = false)
         {
             if (!WindowsDirectory.IsSafeAbsolutePath(localAppData))
                 return 2;
 
-            var report = new RunReport(now, dryRun);
+            var report = new RunReport(now, dryRun, inspectLargeFiles);
             try
             {
                 // Establish a safe report destination before doing any destructive work.

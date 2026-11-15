@@ -18,7 +18,8 @@ namespace TempAutoCleaner
                 using (WindowsDirectory directory = Open(root, ListDirectory))
                 {
                     long cutoff = now.UtcDateTime.AddHours(-24).ToFileTimeUtc();
-                    Scan(directory.Handle, ReadInfo(directory.Handle).VolumeSerial, cutoff, report, beforeOpen, 0);
+                    Scan(directory.Handle, ReadInfo(directory.Handle).VolumeSerial, cutoff, report, beforeOpen,
+                        depth: 0, relativePrefix: report.Inspection == null ? null : string.Empty);
                 }
             }
             catch (Win32Exception error)
@@ -35,7 +36,7 @@ namespace TempAutoCleaner
             ((current.Attributes & FileAttributes.Directory) != 0) == directory && !IsProtected(current.Attributes);
 
         private static bool Scan(SafeFileHandle parent, uint volume, long cutoff, RunReport report,
-            Action<string> beforeOpen, int depth)
+            Action<string> beforeOpen, int depth, string relativePrefix)
         {
             try
             {
@@ -43,12 +44,16 @@ namespace TempAutoCleaner
                 {
                     if ((entry.Attributes & FileAttributes.Directory) != 0)
                     {
-                        if (!ProcessDirectory(parent, entry, volume, cutoff, report, beforeOpen, depth))
+                        if (!ProcessDirectory(parent, entry, volume, cutoff, report, beforeOpen, depth, relativePrefix))
                             report.SkippedDirectories++;
                     }
-                    else if (!ProcessFile(parent, entry, volume, cutoff, report, beforeOpen))
+                    else
                     {
-                        report.SkippedFiles++;
+                        bool matched = report.Inspection == null
+                            ? ProcessFile(parent, entry, volume, cutoff, report, beforeOpen)
+                            : InspectFile(parent, entry, volume, report, beforeOpen, relativePrefix);
+                        if (!matched)
+                            report.SkippedFiles++;
                     }
                 }
                 return true;
@@ -56,6 +61,36 @@ namespace TempAutoCleaner
             catch (Win32Exception error)
             {
                 report.RecordError("enumerate", error.NativeErrorCode, fatal: depth == 0);
+                return false;
+            }
+        }
+
+        private static bool InspectFile(SafeFileHandle parent, DirectoryEntry entry, uint volume,
+            RunReport report, Action<string> beforeOpen, string relativePrefix)
+        {
+            LargeFileInspection inspection = report.Inspection;
+            if (!IsSafeComponent(entry.Name) || IsProtected(entry.Attributes) ||
+                !inspection.Includes(entry.Size, entry.Created, entry.LastWrite))
+                return false;
+
+            try
+            {
+                beforeOpen?.Invoke(entry.Name);
+                using (SafeFileHandle file = OpenChild(parent, entry.Name, ReadAttributes,
+                    ShareReadWrite | ShareDelete, NonDirectory))
+                {
+                    FileInfoByHandle info = ReadInfo(file);
+                    if (!Matches(entry, info, volume, false) || info.Links != 1 ||
+                        !inspection.Includes(info.Size, info.Created, info.LastWrite))
+                        return false;
+
+                    inspection.Record(relativePrefix + entry.Name, info);
+                    return true;
+                }
+            }
+            catch (Win32Exception error)
+            {
+                report.RecordError("inspect_file", error.NativeErrorCode);
                 return false;
             }
         }
@@ -99,7 +134,7 @@ namespace TempAutoCleaner
         }
 
         private static bool ProcessDirectory(SafeFileHandle parent, DirectoryEntry entry, uint volume,
-            long cutoff, RunReport report, Action<string> beforeOpen, int depth)
+            long cutoff, RunReport report, Action<string> beforeOpen, int depth, string relativePrefix)
         {
             if (!IsSafeComponent(entry.Name) || IsProtected(entry.Attributes))
                 return false;
@@ -116,9 +151,14 @@ namespace TempAutoCleaner
                 using (SafeFileHandle child = OpenChild(parent, entry.Name, access, ShareReadWrite, NativeFiles.Directory))
                 {
                     FileInfoByHandle info = ReadInfo(child);
-                    if (!Matches(entry, info, volume, true) ||
-                        !Scan(child, volume, cutoff, report, beforeOpen, depth + 1) ||
-                        !IsOld(entry.Created, entry.LastWrite, cutoff) || ReadEntries(child).Any())
+                    if (!Matches(entry, info, volume, true))
+                        return false;
+                    string childPrefix = relativePrefix == null ? null : relativePrefix + entry.Name + "\\";
+                    if (!Scan(child, volume, cutoff, report, beforeOpen, depth + 1, childPrefix))
+                        return false;
+                    if (report.Inspection != null)
+                        return true;
+                    if (!IsOld(entry.Created, entry.LastWrite, cutoff) || ReadEntries(child).Any())
                         return false;
                 }
 

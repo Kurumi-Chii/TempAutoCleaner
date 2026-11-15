@@ -12,7 +12,7 @@ Temp Auto Cleaner 是一款 Windows 工具，用于清理当前用户符合条�
 
 ## 清理规则
 
-- 清理目标固定为 Windows 为当前用户解析的 `%LOCALAPPDATA%\Temp`。程序只接受一个可选参数 `--dry-run`。
+- 清理目标固定为 Windows 为当前用户解析的 `%LOCALAPPDATA%\Temp`。程序可以接受一个可选参数，`--dry-run` 或 `--inspect-large-files`。
 - 创建时间和最后修改时间都必须严格超过 24 小时。程序会跳过元数据无法确认、带受保护属性、有多个硬链接、含 NTFS 命名数据流或存在冲突占用的文件。
 - 程序扫描普通子目录，跳过符号链接、目录联接点和其他重解析点，保留 Temp 根目录。子目录在处理完其中的文件后，只有为空且两个时间戳仍符合条件时才会尝试删除。
 - 清理目标须位于本地 NTFS 卷。根目录缺失或路径无法验证时，程序会退出。
@@ -28,8 +28,21 @@ $run = Start-Process -FilePath $exe -ArgumentList '--dry-run' -Wait -PassThru
 $run.ExitCode
 ```
 
-Dry Run 会保留目标中的文件和目录，并把报告写入 `%LOCALAPPDATA%\TempAutoCleaner\logs`。可先查看报告，再无参数启动程序以执行实际清理。报告使用 JSON，时间统一为 UTC，不含个人文件路径。实际清理会轮换超过 30 天的日志。报告中的清理字节数按被删除文件的大小估算，可能与磁盘可用空间的变化不同。
+Dry Run 会保留目标中的文件和目录，并把报告写入 `%LOCALAPPDATA%\TempAutoCleaner\logs`。可先查看报告，再无参数启动程序以执行实际清理。常规清理和 Dry Run 报告使用 JSON，时间统一为 UTC，不含个人文件路径。实际清理会轮换超过 30 天的日志。报告中的清理字节数按被删除文件的大小估算，可能与磁盘可用空间的变化不同。
 
 退出码 `0` 表示成功，`1` 表示部分成功，`2` 表示失败，`3` 表示已有实例运行，`64` 表示参数无效。
+
+## 检查大文件
+
+使用上面的 `$exe` 手动运行检查。
+
+```powershell
+$run = Start-Process -FilePath $exe -ArgumentList '--inspect-large-files' -Wait -PassThru
+$run.ExitCode
+```
+
+检查只读取文件元数据。以扫描开始时间为基准，报告创建超过 48 小时、最近 24 小时内修改过且大小至少为 100 MiB 的普通文件。只能统计能够核实的文件。本地 JSON 报告位于 `%LOCALAPPDATA%\TempAutoCleaner\logs`。`large_recent_files.total` 是匹配总数，`large_recent_files.files` 最多列出最大的 20 个匹配项。
+
+只有手动检查报告会记录相对于 Temp 的路径。分享报告前请遮盖这些路径。检查期间保留 Temp 文件和已有日志。
 
 参见[构建与隔离测试](CONTRIBUTING.md)、[技术设计](docs/technical-design.md)和 [MIT 许可证](LICENSE)。

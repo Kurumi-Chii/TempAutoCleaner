@@ -50,6 +50,8 @@ namespace TempAutoCleaner.Tests
                         StreamTests.PreservesFileWithOpenNamedStream,
                         StreamTests.PreservesDirectoryWithNamedStream,
                         ProcessTests.PreventsConcurrentProcess,
+                        InspectionTests.InspectionReportsOnlyMatchingFiles,
+                        InspectionTests.InspectionLimitsReportToLargestFiles,
                         LoggingTests.DryRunWritesReportWithoutRotating,
                         LoggingTests.CleanupRotatesOnlyExpiredOwnedReports,
                         LoggingTests.RejectsJunctionAtLogDestination
