@@ -16,6 +16,7 @@ Temp Auto Cleaner is a Windows utility that removes eligible temporary files for
 - Both creation time and last-write time must be strictly older than 24 hours. The cleaner skips files with uncertain metadata, protected attributes, multiple hard links, named NTFS data streams, or conflicting open handles.
 - The program traverses ordinary directories. It skips symbolic links, junctions, and other reparse points, and keeps the Temp root. Empty subdirectories are considered after their files and must still meet both age checks.
 - The cleaner supports a local NTFS target. Missing or unsafe roots cause the program to exit.
+- **Why are files still in Temp after cleanup?** The cleaner keeps the Temp root and checks each file individually. It leaves recently created or modified files, files in use, and protected files in place while removing eligible older files in the same folder. A subfolder stays if it still contains files or subfolders.
 
 ## Build and preview
 
